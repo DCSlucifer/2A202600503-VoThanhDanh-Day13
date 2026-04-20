@@ -1,9 +1,51 @@
+# Virtual environment
 .venv/
+venv/
+env/
+
+# Python cache
 __pycache__/
 *.pyc
-.DS_Store
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment / Secrets
+.env
+.env.local
+.env.production
+
+# Runtime logs (generated data)
 data/logs.jsonl
 data/audit.jsonl
-.env
-.pytest_cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Antigravity / AI tools
 .antigravity/
+
+# Temp scripts
+scripts/send_test_requests.py
+
+

@@ -1,19 +1,78 @@
+# ---------------------------------------------------------------------------
+# Alert Rules — Day 13 Observability Lab
+# All alerts are symptom-based (user-visible impact), not cause-based.
+# Each alert links to a runbook in docs/alerts.md for on-call response.
+# ---------------------------------------------------------------------------
+
 alerts:
-  - name: high_latency_p95
-    severity: P2
-    condition: latency_p95_ms > 5000 for 30m
-    type: symptom-based
-    owner: team-oncall
-    runbook: docs/alerts.md#1-high-latency-p95
+  # ----- P1: User-visible failures ----------------------------------------
   - name: high_error_rate
     severity: P1
-    condition: error_rate_pct > 5 for 5m
+    description: "5xx error rate sustained above SLO threshold"
+    condition: "error_rate_pct > 5 for 5m"
+    metric: error_rate_pct
+    threshold: 5.0            # % of requests
+    window: 5m
     type: symptom-based
     owner: team-oncall
-    runbook: docs/alerts.md#2-high-error-rate
+    runbook: "docs/alerts.md#2-high-error-rate"
+    labels:
+      team: backend
+      slo: error_rate_pct
+    annotations:
+      summary: "Error rate {{ $value }}% exceeds 5% threshold"
+      description: "Sustained 5xx errors indicate a broken dependency or recent bad deploy."
+
+  # ----- P2: Latency tail degradation -------------------------------------
+  - name: high_latency_p95
+    severity: P2
+    description: "P95 latency exceeds SLO objective for sustained window"
+    condition: "latency_p95_ms > 3000 for 15m"
+    metric: latency_p95_ms
+    threshold: 3000           # ms (1.5× SLO objective — alert before SLO breach)
+    window: 15m
+    type: symptom-based
+    owner: team-oncall
+    runbook: "docs/alerts.md#1-high-latency-p95"
+    labels:
+      team: backend
+      slo: latency_p95_ms
+    annotations:
+      summary: "P95 latency {{ $value }}ms exceeds 3000ms for 15m"
+      description: "Tail latency SLO at risk. Check RAG retrieval and LLM generation spans."
+
+  # ----- P2: Cost anomaly -------------------------------------------------
   - name: cost_budget_spike
     severity: P2
-    condition: hourly_cost_usd > 2x_baseline for 15m
-    type: symptom-based
+    description: "Hourly LLM cost exceeds 2× recent baseline"
+    condition: "hourly_cost_usd > 0.10 for 15m"
+    metric: hourly_cost_usd
+    threshold: 0.10           # USD/hour (≈$2.4/day — 2.4× our $1/day SLO objective)
+    window: 15m
+    type: anomaly-based
     owner: finops-owner
-    runbook: docs/alerts.md#3-cost-budget-spike
+    runbook: "docs/alerts.md#3-cost-budget-spike"
+    labels:
+      team: finops
+      slo: daily_cost_usd
+    annotations:
+      summary: "Hourly LLM cost {{ $value }} USD exceeds baseline"
+      description: "Abnormal token usage detected. Check cost_spike incident toggle and prompt length."
+
+  # ----- P3: Quality regression -------------------------------------------
+  - name: quality_degradation
+    severity: P3
+    description: "Average quality score drops below SLO objective"
+    condition: "quality_score_avg < 0.60 for 30m"
+    metric: quality_score_avg
+    threshold: 0.60           # Below SLO floor of 0.70 with warning margin
+    window: 30m
+    type: symptom-based
+    owner: team-oncall
+    runbook: "docs/alerts.md#4-quality-degradation"
+    labels:
+      team: backend
+      slo: quality_score_avg
+    annotations:
+      summary: "Quality score {{ $value }} below 0.60 threshold"
+      description: "Heuristic quality has degraded. Check RAG retrieval results and LLM output."

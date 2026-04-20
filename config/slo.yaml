@@ -1,16 +1,55 @@
+# ---------------------------------------------------------------------------
+# Service Level Objectives — Day 13 Observability Lab
+# Service: day13-observability-lab
+# Window: rolling 28 days
+# ---------------------------------------------------------------------------
+#
+# SLI definitions:
+#   target     = % of time the metric must be within the objective
+#   objective  = the threshold value that defines "good" behavior
+#
+# Reasoning:
+#   - latency_p95_ms: 2000ms gives comfortable headroom over our mock LLM's
+#     ~150ms base + RAG overhead. 99% target means ≤7.2h of SLO breach/month.
+#   - error_rate_pct: 1% is industry-standard for internal lab API.
+#     99.5% target is achievable given controlled mock backend.
+#   - daily_cost_usd: $1.00/day is realistic for a lab with ~100 req/day at
+#     ~$0.008/req average. Hard cap at 100% to trigger alert without grace.
+#   - quality_score_avg: 0.70 baseline from heuristic scorer with RAG context.
+#     95% target: we tolerate occasional low-quality responses in dev.
+# ---------------------------------------------------------------------------
+
 service: day13-observability-lab
 window: 28d
+
 slis:
+  # Response latency at 95th percentile
   latency_p95_ms:
-    objective: 3000
-    target: 99.5
-    note: Replace with your group's target
+    description: "95th-percentile end-to-end response latency"
+    objective: 2000          # ms — must stay below 2s for 99% of the measurement window
+    target: 99.0             # % of 28-day window in compliance
+    breach_budget_hours: 5.0 # = 1% of 720h ≈ 7.2h; we use 5h as conservative budget
+    alert: high_latency_p95
+
+  # HTTP error rate (4xx/5xx excluding health checks)
   error_rate_pct:
-    objective: 2
-    target: 99.0
+    description: "% of requests returning 5xx or unhandled exceptions"
+    objective: 1.0           # % — at most 1 error per 100 requests
+    target: 99.5             # % of 28-day window in compliance
+    breach_budget_hours: 3.5 # 0.5% of 720h ≈ 3.6h; tighter because P1 impact
+    alert: high_error_rate
+
+  # Cumulative LLM token spend per calendar day
   daily_cost_usd:
-    objective: 2.5
-    target: 100.0
+    description: "Estimated LLM cost per day based on token usage"
+    objective: 1.00          # USD/day — lab budget ceiling
+    target: 100.0            # Always-on compliance; any breach triggers alert
+    alert: cost_budget_spike
+
+  # Average heuristic quality score across all requests
   quality_score_avg:
-    objective: 0.75
-    target: 95.0
+    description: "Mean heuristic quality score (0–1) for all /chat responses"
+    objective: 0.70          # Minimum acceptable average quality
+    target: 95.0             # 95% of measurement windows must meet objective
+    breach_budget_hours: 30.0 # 5% of 720h = 36h; we use 30h as conservative budget
+    alert: quality_degradation
