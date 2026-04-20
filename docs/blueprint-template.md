@@ -3,7 +3,7 @@
 > **Instruction**: Fill in all sections below. This report is designed to be parsed by an automated grading assistant. Ensure all tags (e.g., `[GROUP_NAME]`) are preserved.
 
 ## 1. Team Metadata
-- [GROUP_NAME]: . 81
+- [GROUP_NAME]: . 18
 - [REPO_URL]: [ (https://github.com/DCSlucifer/2A202600503-VoThanhDanh-Day13.git) ]
 - [MEMBERS]:
   - Member A+B+C: Võ Thành Danh | Role: Logging & PII + Tracing & Enrichment + SLO & Alerts
