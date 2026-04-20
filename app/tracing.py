@@ -5,28 +5,57 @@ from contextlib import contextmanager
 from typing import Any, Generator
 
 try:
-    from langfuse.decorators import langfuse_context, observe
+    from langfuse.decorators import langfuse_context, observe  # v2/v3
     _LANGFUSE_AVAILABLE = True
-except Exception:  # pragma: no cover
-    _LANGFUSE_AVAILABLE = False
+except Exception:
+    try:
+        from langfuse import observe  # v4+
+        from langfuse import get_client as _get_client
+        class _LangfuseContextCompat:
+            """Compatibility shim for langfuse v4 (no langfuse_context)."""
+            def update_current_trace(self, **kwargs):
+                try:
+                    client = _get_client()
+                    if client:
+                        client.update_current_trace(**kwargs)
+                except Exception:
+                    pass
+            def update_current_observation(self, **kwargs):
+                try:
+                    client = _get_client()
+                    if client:
+                        client.update_current_observation(**kwargs)
+                except Exception:
+                    pass
+            def score_current_trace(self, **kwargs):
+                try:
+                    client = _get_client()
+                    if client:
+                        client.score_current_trace(**kwargs)
+                except Exception:
+                    pass
+        langfuse_context = _LangfuseContextCompat()
+        _LANGFUSE_AVAILABLE = True
+    except Exception:
+        _LANGFUSE_AVAILABLE = False
 
-    def observe(*args: Any, **kwargs: Any):  # type: ignore[misc]
-        """No-op decorator when Langfuse is not installed."""
-        def decorator(func):
-            return func
-        return decorator
+        def observe(*args: Any, **kwargs: Any):  # type: ignore[misc]
+            """No-op decorator when Langfuse is not installed."""
+            def decorator(func):
+                return func
+            return decorator
 
-    class _DummyContext:
-        def update_current_trace(self, **kwargs: Any) -> None:
-            return None
+        class _DummyContext:
+            def update_current_trace(self, **kwargs: Any) -> None:
+                return None
 
-        def update_current_observation(self, **kwargs: Any) -> None:
-            return None
+            def update_current_observation(self, **kwargs: Any) -> None:
+                return None
 
-        def score_current_trace(self, **kwargs: Any) -> None:
-            return None
+            def score_current_trace(self, **kwargs: Any) -> None:
+                return None
 
-    langfuse_context = _DummyContext()  # type: ignore[assignment]
+        langfuse_context = _DummyContext()  # type: ignore[assignment]
 
 
 def tracing_enabled() -> bool:
