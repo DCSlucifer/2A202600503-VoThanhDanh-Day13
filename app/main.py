@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import os
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from structlog.contextvars import bind_contextvars
 
 from .agent import LabAgent
@@ -40,6 +42,12 @@ async def health() -> dict:
 @app.get("/metrics")
 async def metrics() -> dict:
     return snapshot()
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard() -> HTMLResponse:
+    html = Path("static/dashboard.html").read_text(encoding="utf-8")
+    return HTMLResponse(content=html)
 
 
 @app.post("/chat", response_model=ChatResponse)

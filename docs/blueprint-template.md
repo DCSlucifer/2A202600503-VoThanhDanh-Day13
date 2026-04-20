@@ -3,102 +3,57 @@
 > **Instruction**: Fill in all sections below. This report is designed to be parsed by an automated grading assistant. Ensure all tags (e.g., `[GROUP_NAME]`) are preserved.
 
 ## 1. Team Metadata
-- [GROUP_NAME]:
-- [REPO_URL]: https://github.com/DCSlucifer/2A202600503-VoThanhDanh-Day13
+- [GROUP_NAME]: . 18
+- [REPO_URL]: [ (https://github.com/DCSlucifer/2A202600503-VoThanhDanh-Day13.git) ]
 - [MEMBERS]:
-  - Member A: Võ Thành Danh | Role: Logging & PII
-  - Member B: Võ Thành Danh | Role: Tracing & Enrichment
-  - Member C: Võ Thành Danh | Role: SLO & Alerts
-  - Member D: [Name] | Role: Load Test & Incident Injection
-  - Member E: [Name] | Role: Dashboard & Evidence
-  - Member F: [Name] | Role: Blueprint & Demo Lead
+  - Member A+B+C: Võ Thành Danh | Role: Logging & PII + Tracing & Enrichment + SLO & Alerts
+  - Member D+E+F: Trương Hầu Minh Kiệt | Role: Load Test & Dashboard & Demo & Report
 
 ---
 
 ## 2. Group Performance (Auto-Verified)
-- [VALIDATE_LOGS_FINAL_SCORE]: 100/100
-- [TOTAL_TRACES_COUNT]: 15
-- [PII_LEAKS_FOUND]: 0
+- [VALIDATE_LOGS_FINAL_SCORE]: . 100/100
+- [TOTAL_TRACES_COUNT]: . 15
+- [PII_LEAKS_FOUND]: . 0
 
 ---
 
-## 3. Technical Evidence (Group)
 
 ### 3.1 Logging & Tracing
-
-- [EVIDENCE_CORRELATION_ID_SCREENSHOT]: ![Correlation ID in response](evidence/correlation_id_evidence.png)
-- [EVIDENCE_PII_REDACTION_SCREENSHOT]: ![PII Redaction in Swagger](evidence/correlation_id_evidence.png) *(Request chứa PII → response body có correlation_id, log file thay PII bằng [REDACTED_xxx])*
+- [EVIDENCE_CORRELATION_ID_SCREENSHOT]: ![ correlation_id](evidence/correlation_id.png)
+- [EVIDENCE_PII_REDACTION_SCREENSHOT]: ![ EVIDENCE](evidence/screenshot_logs2.png)
 - [EVIDENCE_TRACE_WATERFALL_SCREENSHOT]: ![Langfuse Trace Waterfall](evidence/langfuse_trace_waterfall.png)
 - [TRACE_WATERFALL_EXPLANATION]: Trace waterfall hiển thị pipeline `agent.run` (0.16s) → `agent.retrieval` (0.00s) → `agent.generation` (0.15s). Mỗi span ghi input/output, metadata (user_id, feature, session_id), và metrics (tokens_in=28, tokens_out=131, cost_usd=$0.002049, quality_score=0.9). 60 spans tổng (15 traces × 4 spans/trace). Langfuse project: Day13-Lab / observability-lab.
 
-**Correlation ID**: Middleware (`app/middleware.py`) tạo `req-<8hex>` cho mỗi request, bind vào structlog contextvars → mọi log line và trace trong cùng 1 request đều chia sẻ chung ID này.
-
-**PII Redaction**: Module `app/pii.py` chứa 6 regex patterns (email, SĐT VN, thẻ tín dụng, CCCD, hộ chiếu VN, địa chỉ VN). Processor `scrub_event` trong structlog pipeline chạy trước serialization → không có PII nào tới log storage.
-
-**Ví dụ log thực tế từ `data/logs.jsonl`:**
-```json
-{"service":"api","payload":{"message_preview":"My email is [REDACTED_EMAIL]"},"event":"request_received","user_id_hash":"7d2abd42d3f2","correlation_id":"req-20ed311c","env":"dev","session_id":"s_demo_05","feature":"qa","model":"claude-sonnet-4-5","level":"info","ts":"2026-04-20T03:20:38.916Z"}
-{"service":"api","payload":{"message_preview":"CCCD: [REDACTED_CCCD]"},"event":"request_received","user_id_hash":"6bd13c87afd4","correlation_id":"req-0dcf1c27","env":"dev","session_id":"s_demo_13","feature":"qa","model":"claude-sonnet-4-5","level":"info","ts":"2026-04-20T03:20:40.026Z"}
-{"service":"api","payload":{"message_preview":"Phone [REDACTED_PHONE_VN] please call"},"event":"request_received","user_id_hash":"93b891281403","correlation_id":"req-9019f88b","env":"dev","session_id":"s_demo_07","feature":"summary","model":"claude-sonnet-4-5","level":"info","ts":"2026-04-20T03:20:39.076Z"}
-{"service":"api","payload":{"message_preview":"Passport [REDACTED_PASSPORT_VN] holder"},"event":"request_received","user_id_hash":"17fa0f5f16ec","correlation_id":"req-47317765","env":"dev","session_id":"s_demo_14","feature":"qa","model":"claude-sonnet-4-5","level":"info","ts":"2026-04-20T03:20:40.181Z"}
-```
-
-**Tracing spans**: Agent pipeline sử dụng `@observe` decorator tạo trace chính `agent.run` với 3 sub-spans: `agent.retrieval` (RAG lookup), `agent.generation` (LLM call), `agent.scoring` (quality heuristic). Mỗi span có metadata riêng (doc_count, prompt_length, quality_score).
-
 ### 3.2 Dashboard & SLOs
-
 - [DASHBOARD_6_PANELS_SCREENSHOT]: ![Metrics endpoint](evidence/metrics_dashboard.png)
 - [SLO_TABLE]:
 
 | SLI | Objective | Target | Window | Current Value |
 |---|---|---:|---|---:|
 | Latency P95 | ≤ 2000ms | 99.0% | 28d | 150ms ✅ |
-| Error Rate | ≤ 1% | 99.5% | 28d | 0% ✅ |
-| Daily Cost | ≤ $1.00/day | 100% | 1d | $0.0288 ✅ |
-| Quality Score Avg | ≥ 0.70 | 95.0% | 28d | 0.8267 ✅ |
-
-**Metrics endpoint (`GET /metrics`) output thực tế:**
-```json
-{
-  "traffic": 15,
-  "latency_p50": 150.0,
-  "latency_p95": 150.0,
-  "latency_p99": 150.0,
-  "avg_cost_usd": 0.0019,
-  "total_cost_usd": 0.0288,
-  "tokens_in_total": 427,
-  "tokens_out_total": 1837,
-  "error_breakdown": {},
-  "quality_avg": 0.8267
-}
-```
+| Error Rate | ≤ 2% | 99.5% | 28d | 0% ✅ |
+| Daily Cost | ≤ $1.00/day | 100% | 1d | $0.0647 ✅ |
+| Quality Score Avg | ≥ 0.70 | 95.0% | 28d | 0.860 ✅ |
 
 ### 3.3 Alerts & Runbook
-
-- [ALERT_RULES_SCREENSHOT]: Xem file [config/alert_rules.yaml](../config/alert_rules.yaml) — 4 alert rules đầy đủ severity, condition, threshold, runbook link.
-- [SAMPLE_RUNBOOK_LINK]: [docs/alerts.md#1-high-latency-p95](docs/alerts.md#1-high-latency-p95)
-
-**4 Alert Rules (config/alert_rules.yaml):**
-
-| Alert | Severity | Condition | Runbook |
-|---|---|---|---|
-| high_error_rate | P1 | error_rate > 5% for 5m | docs/alerts.md#2-high-error-rate |
-| high_latency_p95 | P2 | latency_p95 > 3000ms for 15m | docs/alerts.md#1-high-latency-p95 |
-| cost_budget_spike | P2 | hourly_cost > $0.10 for 15m | docs/alerts.md#3-cost-budget-spike |
-| quality_degradation | P3 | quality_avg < 0.60 for 30m | docs/alerts.md#4-quality-degradation |
+- [ALERT_RULES_SCREENSHOT]: ![Alert Rules](evidence/alert_rules.png)
+- [SAMPLE_RUNBOOK_LINK]: - docs/alerts.md#1-high-latency-p95
 
 ---
 
 ## 4. Incident Response (Group)
-- [SCENARIO_NAME]:
-- [SYMPTOMS_OBSERVED]:
-- [ROOT_CAUSE_PROVED_BY]:
-- [FIX_ACTION]:
-- [PREVENTIVE_MEASURE]:
+- [SCENARIO_NAME]: rag_slow
+- [SYMPTOMS_OBSERVED]: Avg latency tăng từ ~158ms lên ~2658ms (tăng 16.8×) sau khi bật rag_slow. Dashboard Panel 1 (Latency P95) chuyển đỏ, vượt ngưỡng SLO 2000ms.
+- [ROOT_CAUSE_PROVED_BY]: req-999329c2 — span `agent.retrieval` chiếm ~2500ms/2658ms tổng latency do `rag_slow=True` trong incident_state metadata. Xác nhận qua Langfuse trace waterfall: `agent.generation` vẫn bình thường (~150ms), chứng minh bottleneck nằm ở tầng RAG retrieval, không phải LLM.
+- [FIX_ACTION]: POST /incidents/rag_slow/disable — tắt incident toggle, latency trở về bình thường
+- [PREVENTIVE_MEASURE]: Thêm timeout cho RAG retrieval trong mock_rag.py; alert high_latency_p95 (P2, 15m window) sẽ cảnh báo trước khi SLO bị vi phạm. Technical Evidence (Group)
+
 
 ---
 
 ## 5. Individual Contributions & Evidence
+
 
 ### Võ Thành Danh — Member A: Logging & PII
 
@@ -153,25 +108,19 @@
 - Alert thresholds set cao hơn SLO objectives (ví dụ: SLO latency = 2000ms, alert = 3000ms) — alert ở 1.5× SLO để có thời gian react trước khi SLO breach.
 - Breach budget tính: (100% - target%) × 720h (28 days). Ví dụ: latency target 99% → budget = 1% × 720 = 7.2h, set 5h conservative.
 
-### [MEMBER_D_NAME]
+### [MEMBER_D+E+F]: Trương Hầu Minh Kiệt
 - [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
-
-### [MEMBER_E_NAME]
-- [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
-
-### [MEMBER_F_NAME]
-- [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]:
+  - Viết scripts/send_test_requests.py — gửi 15 requests có PII, in bảng kết quả rõ ràng
+  - Viết scripts/dashboard.py — terminal dashboard 6 panels với SLO threshold, auto-refresh 5s
+  - Thực thi load test (15 requests, --concurrency 3) và xác nhận validate_logs.py đạt 100/100
+  - Thực thi incident injection (rag_slow), quan sát latency tăng, phân tích root cause qua traces
+  - Thu thập toàn bộ bằng chứng screenshots cho grading-evidence.md
+  - Điền và hoàn thiện báo cáo blueprint-template.md
+- [EVIDENCE_LINK]: <!-- TODO: dán link commit của scripts/send_test_requests.py và scripts/dashboard.py -->
 
 ---
 
 ## 6. Bonus Items (Optional)
-
-- [BONUS_AUDIT_LOGS]: **+2đ — Audit logs tách riêng**. Class `AuditLogger` trong `app/logging_config.py` ghi structured events ra file riêng `data/audit.jsonl`, tách biệt khỏi application logs (`data/logs.jsonl`). Tất cả string values đều scrub PII trước khi ghi. Mỗi audit record có `"audit": true` flag. Được sử dụng tại 5 điểm trong `app/main.py`: `chat_request`, `chat_response_ok`, `chat_request_error`, `incident_toggled` (enable/disable). Evidence: `tests/test_member_a_logging_pii.py::TestAuditLogger` — 4 tests PASSED.
-
-- [BONUS_AUTO_INSTRUMENTATION]: **+2đ — Auto-instrumentation**. Decorator factory `@instrument(name, **static_metadata)` trong `app/tracing.py:74-95` cho phép wrap bất kỳ function nào trong named Langfuse observation span mà không cần viết boilerplate. Preserves `__name__` và `__qualname__` cho debug. Evidence: `tests/test_member_b_tracing_tags.py::TestInstrumentDecorator` — 3 tests PASSED.
-
-- [BONUS_COST_OPTIMIZATION]: **+3đ — Tối ưu chi phí (số liệu trước/sau)**. Chạy scenario `cost_spike` (simulate 4x token bloat) với `scripts/cost_optimization_evidence.py`. Kết quả thực tế: BEFORE (normal) = $0.0021/req, DURING spike = $0.0051/req (+143% increase), AFTER fix (disable incident) = $0.004/req (-22% reduction). Cơ chế: (1) `_estimate_cost()` formula `(tokens_in/1M)×$3 + (tokens_out/1M)×$15` tracking cost mỗi request; (2) SLO `daily_cost_usd ≤ $1.00` trong `config/slo.yaml`; (3) Alert `cost_budget_spike` (P2) fire khi `hourly_cost > $0.10` trong 15 phút; (4) Incident toggle `cost_spike` cho phép reproduce và validate detection → fix → recovery cycle.
-- [BONUS_CUSTOM_METRIC]:
+- [BONUS_AUDIT_LOGS]: Audit logger ghi file riêng `data/audit.jsonl`, hoàn toàn PII-free. Mọi request/response/error/incident toggle đều được ghi. Implement trong `app/logging_config.py` bởi Võ Thành Danh.
+- [BONUS_COST_OPTIMIZATION]: (Không thực hiện — lab mock không có real LLM cost để tối ưu)
+- [BONUS_CUSTOM_METRIC]: Auto-instrumentation decorator `@instrument` trong `app/tracing.py` — wrap bất kỳ function nào thành Langfuse span chỉ bằng 1 dòng decorator.

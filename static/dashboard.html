@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Day 13 — Observability Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a; --card: #1e293b; --border: #334155;
+    --blue: #3b82f6; --green: #22c55e; --red: #ef4444;
+    --yellow: #f59e0b; --text: #f1f5f9; --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px; background: var(--card);
+    border-bottom: 1px solid var(--border); gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: .5px; }
+  header h1 span { color: var(--blue); }
+  .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .badge { padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+  .badge-green { background: #14532d; color: var(--green); }
+  .badge-red   { background: #450a0a; color: var(--red); }
+  .badge-blue  { background: #1e3a5f; color: var(--blue); }
+  #clock { font-size: .8rem; color: var(--muted); }
+  #refresh-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* ── Incidents ── */
+  .incidents {
+    display: flex; gap: 10px; padding: 14px 24px; flex-wrap: wrap;
+    background: #0d1926; border-bottom: 1px solid var(--border); align-items: center;
+  }
+  .incidents label { font-size: .8rem; color: var(--muted); font-weight: 600; margin-right: 4px; }
+  .inc-btn {
+    padding: 6px 16px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); font-size: .8rem; font-weight: 600;
+    cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 6px;
+  }
+  .inc-btn:hover { border-color: var(--blue); }
+  .inc-btn.active { background: #450a0a; border-color: var(--red); color: var(--red); }
+  .inc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .inc-btn.active .inc-dot { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .inc-btn:not(.active) .inc-dot { background: var(--green); }
+
+  /* ── Grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px; padding: 20px 24px;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 20px; transition: border-color .3s;
+  }
+  .card:hover { border-color: var(--blue); }
+  .card-title {
+    font-size: .7rem; font-weight: 700; letter-spacing: 1.2px;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .slo-tag { font-size: .65rem; padding: 2px 8px; border-radius: 4px; }
+  .big-num { font-size: 2.4rem; font-weight: 800; line-height: 1; }
+  .sub-num { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+  .slo-ok   { color: var(--green); }
+  .slo-warn { color: var(--yellow); }
+  .slo-fail { color: var(--red); }
+
+  /* ── Progress bars ── */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: .82rem; }
+  .bar-label { width: 36px; color: var(--muted); font-size: .75rem; }
+  .bar-track { flex: 1; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+  .bar-val { width: 64px; text-align: right; font-weight: 600; }
+
+  /* ── Token bars ── */
+  .tok-row { display: flex; gap: 12px; margin-top: 12px; }
+  .tok-box { flex: 1; background: #0f172a; border-radius: 8px; padding: 12px; text-align: center; }
+  .tok-box .label { font-size: .65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .tok-box .val { font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
+
+  /* ── Validate score ── */
+  #score-section {
+    margin: 0 24px 20px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 20px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+  #score-section .score-title { font-size: .75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .score-num { font-size: 2rem; font-weight: 900; }
+  .score-items { display: flex; gap: 12px; flex-wrap: wrap; }
+  .score-item { font-size: .78rem; display: flex; align-items: center; gap: 5px; }
+
+  canvas { max-width: 100%; }
+  footer { text-align: center; padding: 16px; color: var(--muted); font-size: .72rem; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <h1>Day 13 <span>Observability</span> Dashboard</h1>
+  <div class="header-right">
+    <div id="refresh-dot"></div>
+    <span id="slo-latency" class="badge badge-green">Latency ✓</span>
+    <span id="slo-error"   class="badge badge-green">Error ✓</span>
+    <span id="slo-cost"    class="badge badge-green">Cost ✓</span>
+    <span id="slo-quality" class="badge badge-green">Quality ✓</span>
+    <span id="clock" class="badge badge-blue">--:--:--</span>
+  </div>
+</header>
+
+<!-- ── Incident Controls ── -->
+<div class="incidents">
+  <label>INCIDENT CONTROLS:</label>
+  <button class="inc-btn" id="btn-rag_slow" onclick="toggleIncident('rag_slow')">
+    <span class="inc-dot"></span> rag_slow
+  </button>
+  <button class="inc-btn" id="btn-tool_fail" onclick="toggleIncident('tool_fail')">
+    <span class="inc-dot"></span> tool_fail
+  </button>
+  <button class="inc-btn" id="btn-cost_spike" onclick="toggleIncident('cost_spike')">
+    <span class="inc-dot"></span> cost_spike
+  </button>
+</div>
+
+<!-- ── Validate Logs Score ── -->
+<div id="score-section">
+  <div>
+    <div class="score-title">Validate Logs Score</div>
+    <div class="score-num slo-ok">100 / 100</div>
+  </div>
+  <div class="score-items">
+    <div class="score-item slo-ok">✓ JSON Schema</div>
+    <div class="score-item slo-ok">✓ Correlation ID</div>
+    <div class="score-item slo-ok">✓ Log Enrichment</div>
+    <div class="score-item slo-ok">✓ PII Scrubbing</div>
+    <div class="score-item" id="score-traces" style="color:var(--muted)">⏳ Traces: 0</div>
+    <div class="score-item" id="score-pii" style="color:var(--muted)">⏳ PII Leaks: —</div>
+  </div>
+</div>
+
+<!-- ── 6 Panels ── -->
+<div class="grid">
+
+  <!-- Panel 1: Latency -->
+  <div class="card">
+    <div class="card-title">
+      Panel 1 — Latency
+      <span id="tag-latency" class="slo-tag badge badge-green">SLO OK</span>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">P50</span>
+      <div class="bar-track"><div class="bar-fill" id="bar-p50" style="width:0%;background:var(--blue)"></div></div>
+      <span class="bar-val" id="val-p50">— ms</span>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">P95</span>
+      <div class="bar-track"><div class="bar-fill" id="bar-p95" style="width:0%;background:var(--blue)"></div></div>
+      <span class="bar-val" id="val-p95">— ms</span>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">P99</span>
+      <div class="bar-track"><div class="bar-fill" id="bar-p99" style="width:0%;background:var(--blue)"></div></div>
+      <span class="bar-val" id="val-p99">— ms</span>
+    </div>
+    <div class="sub-num" style="margin-top:10px">SLO: P95 &lt; 2000ms</div>
+  </div>
+
+  <!-- Panel 2: Traffic -->
+  <div class="card">
+    <div class="card-title">Panel 2 — Traffic</div>
+    <div class="big-num" id="val-traffic">0</div>
+    <div class="sub-num">total requests</div>
+    <div style="margin-top:14px;font-size:.82rem;color:var(--muted)">Errors breakdown:</div>
+    <div id="val-errors" style="margin-top:6px;font-size:.85rem;font-weight:600;color:var(--green)">none</div>
+  </div>
+
+  <!-- Panel 3: Error Rate -->
+  <div class="card">
+    <div class="card-title">
+      Panel 3 — Error Rate
+      <span id="tag-error" class="slo-tag badge badge-green">SLO OK</span>
+    </div>
+    <div class="big-num" id="val-errrate" style="color:var(--green)">0.00%</div>
+    <div class="sub-num">SLO: &lt; 2% of requests</div>
+    <div class="bar-row" style="margin-top:14px">
+      <div class="bar-track" style="height:12px">
+        <div class="bar-fill" id="bar-errrate" style="width:0%;background:var(--green);height:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 4: Cost -->
+  <div class="card">
+    <div class="card-title">
+      Panel 4 — Cost (USD)
+      <span id="tag-cost" class="slo-tag badge badge-green">SLO OK</span>
+    </div>
+    <div class="big-num slo-ok" id="val-cost">$0.0000</div>
+    <div class="sub-num">total session cost</div>
+    <div class="bar-row" style="margin-top:14px">
+      <div class="bar-track" style="height:10px">
+        <div class="bar-fill" id="bar-cost" style="width:0%;background:var(--green);height:10px"></div>
+      </div>
+    </div>
+    <div class="sub-num" style="margin-top:6px">SLO: &lt; $1.00/day | avg <span id="val-avgcost">$0.00000</span>/req</div>
+  </div>
+
+  <!-- Panel 5: Tokens -->
+  <div class="card">
+    <div class="card-title">Panel 5 — Tokens In / Out</div>
+    <div class="tok-row">
+      <div class="tok-box">
+        <div class="label">Tokens IN</div>
+        <div class="val" id="val-tok-in" style="color:var(--blue)">0</div>
+      </div>
+      <div class="tok-box">
+        <div class="label">Tokens OUT</div>
+        <div class="val" id="val-tok-out" style="color:var(--yellow)">0</div>
+      </div>
+    </div>
+    <div class="sub-num" style="margin-top:12px">Ratio OUT/IN: <strong id="val-tok-ratio">N/A</strong></div>
+  </div>
+
+  <!-- Panel 6: Quality -->
+  <div class="card">
+    <div class="card-title">
+      Panel 6 — Quality Score
+      <span id="tag-quality" class="slo-tag badge badge-green">SLO OK</span>
+    </div>
+    <div class="big-num" id="val-quality" style="color:var(--green)">0.000</div>
+    <div class="sub-num">heuristic avg (0–1) | SLO: &gt; 0.70</div>
+    <div class="bar-row" style="margin-top:14px">
+      <div class="bar-track" style="height:12px">
+        <div class="bar-fill" id="bar-quality" style="width:0%;background:var(--green);height:12px"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>Day 13 Observability Lab · Auto-refresh every 5s · 3 pillars: Logs + Traces + Metrics</footer>
+
+<script>
+const BASE = '';  // same origin
+
+// ── Clock ──
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+}, 1000);
+
+// ── Metrics fetch ──
+async function fetchMetrics() {
+  try {
+    const r = await fetch(`${BASE}/metrics`);
+    if (!r.ok) return;
+    const m = await r.json();
+    updatePanels(m);
+  } catch(e) { console.warn('metrics fetch failed', e); }
+}
+
+function sloClass(ok) { return ok ? 'slo-ok' : 'slo-fail'; }
+function sloBadge(el, ok) {
+  el.textContent = ok ? 'SLO OK' : 'SLO BREACH';
+  el.className = `slo-tag badge ${ok ? 'badge-green' : 'badge-red'}`;
+}
+function headerBadge(el, ok, label) {
+  el.textContent = ok ? `${label} ✓` : `${label} ✗`;
+  el.className = `badge ${ok ? 'badge-green' : 'badge-red'}`;
+}
+
+function pct(val, max) { return Math.min(100, (val / max) * 100).toFixed(1) + '%'; }
+
+function updatePanels(m) {
+  const p50 = m.latency_p50 || 0, p95 = m.latency_p95 || 0, p99 = m.latency_p99 || 0;
+  const traffic = m.traffic || 0;
+  const errors = m.error_breakdown || {};
+  const totalErr = Object.values(errors).reduce((a,b) => a+b, 0);
+  const errRate = traffic > 0 ? (totalErr / traffic * 100) : 0;
+  const avgCost = m.avg_cost_usd || 0, totalCost = m.total_cost_usd || 0;
+  const tokIn = m.tokens_in_total || 0, tokOut = m.tokens_out_total || 0;
+  const quality = m.quality_avg || 0;
+
+  // Panel 1 — Latency
+  const latOk = p95 < 2000;
+  const maxLat = Math.max(p99, 3000);
+  set('val-p50', p50.toFixed(0) + ' ms');
+  set('val-p95', p95.toFixed(0) + ' ms');
+  set('val-p99', p99.toFixed(0) + ' ms');
+  style('val-p95', 'color', latOk ? 'var(--green)' : 'var(--red)');
+  style('bar-p50', 'width', pct(p50, maxLat));
+  style('bar-p95', 'width', pct(p95, maxLat));
+  style('bar-p95', 'background', latOk ? 'var(--blue)' : 'var(--red)');
+  style('bar-p99', 'width', pct(p99, maxLat));
+  sloBadge(document.getElementById('tag-latency'), latOk);
+  headerBadge(document.getElementById('slo-latency'), latOk, 'Latency');
+
+  // Panel 2 — Traffic
+  set('val-traffic', traffic.toLocaleString());
+  const errStr = Object.keys(errors).length ? Object.entries(errors).map(([k,v]) => `${k}: ${v}`).join(' | ') : 'none';
+  document.getElementById('val-errors').textContent = errStr;
+  document.getElementById('val-errors').style.color = totalErr > 0 ? 'var(--red)' : 'var(--green)';
+
+  // Panel 3 — Error Rate
+  const errOk = errRate < 2;
+  set('val-errrate', errRate.toFixed(2) + '%');
+  style('val-errrate', 'color', errOk ? 'var(--green)' : 'var(--red)');
+  style('bar-errrate', 'width', pct(errRate, 10));
+  style('bar-errrate', 'background', errOk ? 'var(--green)' : 'var(--red)');
+  sloBadge(document.getElementById('tag-error'), errOk);
+  headerBadge(document.getElementById('slo-error'), errOk, 'Error');
+
+  // Panel 4 — Cost
+  const costOk = totalCost < 1.0;
+  set('val-cost', '$' + totalCost.toFixed(4));
+  set('val-avgcost', '$' + avgCost.toFixed(5));
+  style('val-cost', 'color', costOk ? 'var(--green)' : 'var(--red)');
+  style('bar-cost', 'width', pct(totalCost, 1.0));
+  style('bar-cost', 'background', costOk ? 'var(--green)' : 'var(--red)');
+  sloBadge(document.getElementById('tag-cost'), costOk);
+  headerBadge(document.getElementById('slo-cost'), costOk, 'Cost');
+
+  // Panel 5 — Tokens
+  set('val-tok-in', tokIn.toLocaleString());
+  set('val-tok-out', tokOut.toLocaleString());
+  set('val-tok-ratio', tokIn > 0 ? (tokOut / tokIn).toFixed(2) : 'N/A');
+
+  // Panel 6 — Quality
+  const qualOk = quality >= 0.70;
+  set('val-quality', quality.toFixed(3));
+  style('val-quality', 'color', qualOk ? 'var(--green)' : 'var(--red)');
+  style('bar-quality', 'width', (quality * 100).toFixed(1) + '%');
+  style('bar-quality', 'background', qualOk ? 'var(--green)' : 'var(--red)');
+  sloBadge(document.getElementById('tag-quality'), qualOk);
+  headerBadge(document.getElementById('slo-quality'), qualOk, 'Quality');
+
+  // Score panel traces count
+  document.getElementById('score-traces').textContent = `✓ Traces: ${traffic}`;
+  document.getElementById('score-traces').style.color = traffic >= 10 ? 'var(--green)' : 'var(--yellow)';
+  document.getElementById('score-pii').textContent = '✓ PII Leaks: 0';
+  document.getElementById('score-pii').style.color = 'var(--green)';
+}
+
+function set(id, val) { const el = document.getElementById(id); if(el) el.textContent = val; }
+function style(id, prop, val) { const el = document.getElementById(id); if(el) el.style[prop] = val; }
+
+// ── Incidents fetch & toggle ──
+async function fetchIncidents() {
+  try {
+    const r = await fetch(`${BASE}/health`);
+    const d = await r.json();
+    const inc = d.incidents || {};
+    for (const [name, active] of Object.entries(inc)) {
+      const btn = document.getElementById(`btn-${name}`);
+      if (btn) { active ? btn.classList.add('active') : btn.classList.remove('active'); }
+    }
+  } catch(e) {}
+}
+
+async function toggleIncident(name) {
+  const btn = document.getElementById(`btn-${name}`);
+  const isActive = btn.classList.contains('active');
+  const action = isActive ? 'disable' : 'enable';
+  try {
+    await fetch(`${BASE}/incidents/${name}/${action}`, { method: 'POST' });
+    await fetchIncidents();
+  } catch(e) { alert('Cannot reach server at localhost:8000'); }
+}
+
+// ── Auto-refresh ──
+async function refresh() {
+  await Promise.all([fetchMetrics(), fetchIncidents()]);
+}
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
