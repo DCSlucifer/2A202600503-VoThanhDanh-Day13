@@ -4,7 +4,7 @@
 
 ## 1. Team Metadata
 - [GROUP_NAME]: 2A202600502
-- [REPO_URL]: <!-- TODO: dán URL repo GitHub/GitLab vào đây sau khi push -->
+- [REPO_URL]: [ (https://github.com/DCSlucifer/2A202600503-VoThanhDanh-Day13.git) ]
 - [MEMBERS]:
   - Member A+B+C: Võ Thành Danh | Role: Logging & PII + Tracing & Enrichment + SLO & Alerts
   - Member D+E: Trương Hầu Minh Kiệt | Role: Load Test & Dashboard & Demo & Report
@@ -18,22 +18,6 @@
 
 ---
 
-## 3akdown / traffic * 100 --> |
-| Cost Budget | < $1.00/day | 1d | <!-- TODO: lấy total_cost_usd từ GET /metrics --> |
-| Quality Score | > 0.70 avg | 28d | <!-- TODO: lấy quality_avg từ GET /metrics --> |
-
-### 3.3 Alerts & Runbook
-- [ALERT_RULES_SCREENSHOT]: <!-- TODO: chụp nội dung config/alert_rules.yaml -->
-- [SAMPLE_RUNBOOK_LINK]: docs/alerts.md#1-high-latency-p95
-
----
-
-## 4. Incident Response (Group)
-- [SCENARIO_NAME]: rag_slow
-- [SYMPTOMS_OBSERVED]: Avg latency tăng từ ~158ms lên ~2658ms (tăng 16.8×) sau khi bật rag_slow. Dashboard Panel 1 (Latency P95) chuyển đỏ, vượt ngưỡng SLO 2000ms.
-- [ROOT_CAUSE_PROVED_BY]: req-999329c2 — span `agent.retrieval` chiếm ~2500ms/2658ms tổng latency do `rag_slow=True` trong incident_state metadata. Xác nhận qua Langfuse trace waterfall: `agent.generation` vẫn bình thường (~150ms), chứng minh bottleneck nằm ở tầng RAG retrieval, không phải LLM.
-- [FIX_ACTION]: POST /incidents/rag_slow/disable — tắt incident toggle, latency trở về bình thường
-- [PREVENTIVE_MEASURE]: Thêm timeout cho RAG retrieval trong mock_rag.py; alert high_latency_p95 (P2, 15m window) sẽ cảnh báo trước khi SLO bị vi phạm. Technical Evidence (Group)
 
 ### 3.1 Logging & Tracing
 - [EVIDENCE_CORRELATION_ID_SCREENSHOT]: ![ correlation_id](evidence/correlation_id.png)
@@ -51,6 +35,20 @@
 | Error Rate | ≤ 2% | 99.5% | 28d | 0% ✅ |
 | Daily Cost | ≤ $1.00/day | 100% | 1d | $0.0647 ✅ |
 | Quality Score Avg | ≥ 0.70 | 95.0% | 28d | 0.860 ✅ |
+
+### 3.3 Alerts & Runbook
+- [ALERT_RULES_SCREENSHOT]: ![Alert Rules](evidence/alert_rules.png)
+- [SAMPLE_RUNBOOK_LINK]: docs/alerts.md#1-high-latency-p95
+
+---
+
+## 4. Incident Response (Group)
+- [SCENARIO_NAME]: rag_slow
+- [SYMPTOMS_OBSERVED]: Avg latency tăng từ ~158ms lên ~2658ms (tăng 16.8×) sau khi bật rag_slow. Dashboard Panel 1 (Latency P95) chuyển đỏ, vượt ngưỡng SLO 2000ms.
+- [ROOT_CAUSE_PROVED_BY]: req-999329c2 — span `agent.retrieval` chiếm ~2500ms/2658ms tổng latency do `rag_slow=True` trong incident_state metadata. Xác nhận qua Langfuse trace waterfall: `agent.generation` vẫn bình thường (~150ms), chứng minh bottleneck nằm ở tầng RAG retrieval, không phải LLM.
+- [FIX_ACTION]: POST /incidents/rag_slow/disable — tắt incident toggle, latency trở về bình thường
+- [PREVENTIVE_MEASURE]: Thêm timeout cho RAG retrieval trong mock_rag.py; alert high_latency_p95 (P2, 15m window) sẽ cảnh báo trước khi SLO bị vi phạm. Technical Evidence (Group)
+
 
 ---
 
