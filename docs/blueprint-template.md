@@ -3,18 +3,18 @@
 > **Instruction**: Fill in all sections below. This report is designed to be parsed by an automated grading assistant. Ensure all tags (e.g., `[GROUP_NAME]`) are preserved.
 
 ## 1. Team Metadata
-- [GROUP_NAME]: 2A202600502
+- [GROUP_NAME]: . 81
 - [REPO_URL]: [ (https://github.com/DCSlucifer/2A202600503-VoThanhDanh-Day13.git) ]
 - [MEMBERS]:
   - Member A+B+C: Võ Thành Danh | Role: Logging & PII + Tracing & Enrichment + SLO & Alerts
-  - Member D+E: Trương Hầu Minh Kiệt | Role: Load Test & Dashboard & Demo & Report
+  - Member D+E+F: Trương Hầu Minh Kiệt | Role: Load Test & Dashboard & Demo & Report
 
 ---
 
 ## 2. Group Performance (Auto-Verified)
-- [VALIDATE_LOGS_FINAL_SCORE]: 100/100
-- [TOTAL_TRACES_COUNT]: 15
-- [PII_LEAKS_FOUND]: 0
+- [VALIDATE_LOGS_FINAL_SCORE]: . 100/100
+- [TOTAL_TRACES_COUNT]: . 15
+- [PII_LEAKS_FOUND]: . 0
 
 ---
 
@@ -38,7 +38,7 @@
 
 ### 3.3 Alerts & Runbook
 - [ALERT_RULES_SCREENSHOT]: ![Alert Rules](evidence/alert_rules.png)
-- [SAMPLE_RUNBOOK_LINK]: docs/alerts.md#1-high-latency-p95
+- [SAMPLE_RUNBOOK_LINK]: - docs/alerts.md#1-high-latency-p95
 
 ---
 
@@ -108,7 +108,7 @@
 - Alert thresholds set cao hơn SLO objectives (ví dụ: SLO latency = 2000ms, alert = 3000ms) — alert ở 1.5× SLO để có thời gian react trước khi SLO breach.
 - Breach budget tính: (100% - target%) × 720h (28 days). Ví dụ: latency target 99% → budget = 1% × 720 = 7.2h, set 5h conservative.
 
-### [MEMBER_D+E_NAME]: Trương Hầu Minh Kiệt
+### [MEMBER_D+E+F]: Trương Hầu Minh Kiệt
 - [TASKS_COMPLETED]:
   - Viết scripts/send_test_requests.py — gửi 15 requests có PII, in bảng kết quả rõ ràng
   - Viết scripts/dashboard.py — terminal dashboard 6 panels với SLO threshold, auto-refresh 5s
